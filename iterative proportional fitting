@@ -1,0 +1,86 @@
+# Read in the data in long form (normaly read.table() used)
+c.names <- c("id", "age", "sex", "mode")
+USd <- c(       1, 27, "m", "car.d",
+                2, 54, "m", "car.d",
+                3, 35, "f", "bus",
+
+                4, 42, "m", "walk",
+                5, 50, "f", "car.p",
+                6, 19, "m", "car.d",
+
+                7, 62, "f", "car.d",
+                8, 21, "f", "bicycle",
+                9, 38, "f", "walk",
+                10, 48, "f", "car.d")
+USd <- matrix(USd, nrow = 10, byrow = T) # Convert long data into matrix, by row
+USd <- data.frame(USd) # Convert this into a dataframe
+names(USd) <- c.names # Add correct column names
+USd$age <- as.numeric(levels(USd$age)[USd$age]) # Age is a numeric variable
+
+USd # Show the data frame in R
+
+# Read in the data in long form (normaly read.table() used)
+category.labels <- c("16-30", "31-50", "50+" # Age constraint 
+             ,"m", "f" # Sex constraint
+             ,"bicycle", "bus", "car.d", "car.p", "walk" # Mode constraint
+             )
+all.msim <- c(  3, 3, 4,   5, 5,   0.001, 1, 8, 1, 0.001, # Car dominated
+                2, 2, 6,   4, 6,   0.001, 3, 5, 1, 1, # Elderly
+                3, 4, 4,   3, 8,   1, 2, 5, 2, 1, # Female dominated
+                3, 3, 3,   7, 2,   2, 1, 3, 1, 2, # Male dominated
+                7, 2, 1,   6, 4,   7, 0.001, 2, 0.001, 1  # Many cyclists, young
+                )
+all.msim <- matrix(all.msim, nrow = 5, byrow = T) # Convert long data into matrix, by row
+all.msim <- data.frame(all.msim) # Convert this into a dataframe
+names(all.msim) <- category.labels # Add correct column names
+all.msim # Show the data frame in R
+
+
+# Check totals for each constraint match
+rowSums(all.msim[,1:3]) # Age constraint
+## [1] 10 10 11  9 10
+rowSums(all.msim[,4:5]) # Sex constraint
+## [1] 10 10 11  9 10
+rowSums(all.msim[,6:10])# Mode constraint
+## [1] 10 10 11  9 10
+
+weights0 <- array(dim = c(nrow(USd), nrow(all.msim)))
+weights1 <- array(dim = c(nrow(USd), nrow(all.msim)))
+weights2 <- array(dim = c(nrow(USd), nrow(all.msim)))
+weights3 <- array(dim = c(nrow(USd), nrow(all.msim)))
+
+weights0[, ] <- 1  # sets initial weights to 1
+
+USd.agg <- array(dim = c(nrow(all.msim), ncol(all.msim)))
+USd.agg1 <- array(dim = c(nrow(all.msim), ncol(all.msim)))
+USd.agg2 <- array(dim = c(nrow(all.msim), ncol(all.msim)))
+USd.agg3 <- array(dim = c(nrow(all.msim), ncol(all.msim)))
+colnames(USd.agg1) <- category.labels
+
+USd.cat <- array(rep(0), dim = c(nrow(USd), length(category.labels != 0)))
+
+USd.cat[which(USd$age <= 30), 1] <- 1
+USd.cat[which(USd$age >= 31 & USd$age <= 50), 2] <- 1
+USd.cat[which(USd$age > 50), 3] <- 1
+USd.cat[which(USd$sex == "m"), 4] <- 1
+USd.cat[which(USd$sex == "f"), 5] <- 1
+USd.cat[which(USd$mode == "bicycle"), 6] <- 1  # Mode constraints
+USd.cat[which(USd$mode == "bus"), 7] <- 1
+USd.cat[which(USd$mode == "car.d"), 8] <- 1
+USd.cat[which(USd$mode == "car.p"), 9] <- 1
+USd.cat[which(USd$mode == "walk"), 10] <- 1
+sum(USd.cat)  # Should be 30: 3 variables by 10 individuals
+
+for (i in 1:nrow(all.msim)) {
+    # Loop creating aggregate values (to be repeated later)
+    USd.agg[i, ] <- colSums(USd.cat * weights0[, i])
+}
+
+# Test results
+USd.agg
+
+all.msim
+
+plot(as.vector(as.matrix(all.msim)), as.vector(as.matrix(USd.agg)), xlab = "Constraints", 
+    ylab = "Model output")
+abline(a = 0, b = 1)
